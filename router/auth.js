@@ -1,7 +1,7 @@
 const express = require("express");
 const User = require("../model/User.js");
 const router = express.Router();
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const auth = require("../middleware/authmiddleware");
 
@@ -21,25 +21,31 @@ router.post("/", async (req, res) => {
       password,
     });
 
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
-
-    await user.save();
-
-    const payload = {
-      user: {
-        id: user.id,
-      },
-    };
-    jwt.sign(
-      payload, // token으로 변환할 데이터
-      "jwtSecret", // secret key 값
-      { expiresIn: "1h" }, // token의 유효시간을 1시간으로 설정
-      (err, token) => {
-        if (err) throw err;
-        res.send({ token });
-      }
-    );
+    bcrypt.genSalt(10, (err, salt) => {
+      bcrypt.hash(user.password, salt, (err, hash) => {
+        if (err)
+          return res.status(400).json({ msg: "Error hasing a password" });
+        user.password = hash;
+        user.save().then((newUser) => {
+          if (user) {
+            const payload = {
+              user: {
+                id: user.id,
+              },
+            };
+            jwt.sign(
+              payload, // token으로 변환할 데이터
+              "jwtSecret", // secret key 값
+              { expiresIn: "1h" }, // token의 유효시간을 1시간으로 설정
+              (err, token) => {
+                if (err) throw err;
+                res.send({ token });
+              }
+            );
+          }
+        });
+      });
+    });
   } catch (error) {
     console.error(error.message);
     res.status(500).send("Server Error");

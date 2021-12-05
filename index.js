@@ -8,7 +8,7 @@ const app = express();
 
 const port = process.env.PORT || 9000;
 
-app.use(express.json({ extended: false }));
+app.use(express.json());
 app.use(cors());
 
 //데이터베이스 연결
